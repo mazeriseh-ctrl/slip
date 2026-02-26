@@ -7,6 +7,8 @@ npm-debug.log*
 # pnpm-debug.log*
 # lerna-debug.log*
 
+# Bun
+bun.lockb
 node_modules
 dist
 dist-ssr
