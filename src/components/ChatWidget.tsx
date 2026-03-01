@@ -1,32 +1,58 @@
 import { useState, useEffect, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 interface ChatMessage {
-    id: string;
+    id: number;
     text: string;
-    senderId: string;
-    timestamp: number;
+    sender_id: string;
+    created_at: string;
 }
 
 export default function ChatWidget() {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputValue, setInputValue] = useState('');
-    const [socket, setSocket] = useState<Socket | null>(null);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const newSocket = io();
-        setSocket(newSocket);
-
-        newSocket.on('chat_message', (msg: ChatMessage) => {
-            setMessages((prev) => [...prev, msg]);
+        // ดึง ID ของ User ที่กำลังล็อกอินอยู่
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (user) {
+                setCurrentUserId(user.id);
+            }
         });
 
+        // ดึงข้อความของหน้าแชทตอนโหลดครั้งแรก
+        const fetchMessages = async () => {
+            const { data, error } = await supabase
+                .from('messages')
+                .select('*')
+                .order('created_at', { ascending: true });
+
+            if (!error && data) {
+                setMessages(data as ChatMessage[]);
+            }
+        };
+
+        fetchMessages();
+
+        // สมัครรับข้อมูลอัปเดตแบบ Realtime (เมื่อมีคนส่งข้อความใหม่)
+        const channel = supabase
+            .channel('public:messages')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'messages' },
+                (payload) => {
+                    setMessages((prev) => [...prev, payload.new as ChatMessage]);
+                }
+            )
+            .subscribe();
+
         return () => {
-            newSocket.disconnect();
+            supabase.removeChannel(channel);
         };
     }, []);
 
@@ -36,17 +62,22 @@ export default function ChatWidget() {
         }
     }, [messages, isOpen]);
 
-    const handleSendMessage = (e: React.FormEvent) => {
+    const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (inputValue.trim() && socket) {
-            const msg: ChatMessage = {
-                id: Math.random().toString(36).substring(7),
-                text: inputValue,
-                senderId: socket.id || 'unknown',
-                timestamp: Date.now(),
-            };
-            socket.emit('chat_message', msg);
-            setInputValue('');
+        if (inputValue.trim() && currentUserId) {
+            const textToSend = inputValue;
+            setInputValue(''); // ลบข้อความที่พิมพ์ไปแล้วออกจากช่อง input
+
+            // ส่งข้อมูลไปบันทึกที่ Supabase
+            const { error } = await supabase
+                .from('messages')
+                .insert([{ text: textToSend, sender_id: currentUserId }]);
+
+            if (error) {
+                console.error("🔥 FULL ERROR:", error);
+                alert(`ล้มเหลว: ${error.message} \n[Details: ${error.details}]`);
+            }
+
         }
     };
 
@@ -72,7 +103,7 @@ export default function ChatWidget() {
                                     <h3 className="text-white font-bold tracking-wider text-sm">NEXUS COMM</h3>
                                     <p className="text-[10px] text-neon-cyan/80 flex items-center gap-1">
                                         <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-                                        Encrypted Channel
+                                        Supabase Connected
                                     </p>
                                 </div>
                             </div>
@@ -89,13 +120,13 @@ export default function ChatWidget() {
                             {messages.length === 0 ? (
                                 <div className="h-full flex flex-col items-center justify-center text-gray-500 text-sm">
                                     <MessageSquare className="w-8 h-8 opacity-20 mb-2" />
-                                    <p className="italic">Initiating connection...</p>
-                                    <p className="text-[10px] uppercase tracking-widest mt-1 opacity-50">Secure channel opened</p>
+                                    <p className="italic">No messages yet...</p>
+                                    <p className="text-[10px] uppercase tracking-widest mt-1 opacity-50">Say hello!</p>
                                 </div>
                             ) : (
                                 messages.map((msg, index) => {
-                                    const isMe = msg.senderId === socket?.id;
-                                    const showSender = index === 0 || messages[index - 1].senderId !== msg.senderId;
+                                    const isMe = msg.sender_id === currentUserId;
+                                    const showSender = index === 0 || messages[index - 1].sender_id !== msg.sender_id;
 
                                     return (
                                         <div
@@ -104,21 +135,21 @@ export default function ChatWidget() {
                                         >
                                             {!isMe && showSender && (
                                                 <span className="text-[10px] text-neon-purple uppercase tracking-wider mb-1 ml-1 opacity-80">
-                                                    User_{msg.senderId.substring(0, 4)}
+                                                    User_{msg.sender_id.substring(0, 4)}
                                                 </span>
                                             )}
 
                                             <div
                                                 className={`max-w-[85%] p-3 text-sm shadow-md ${isMe
-                                                        ? 'bg-gradient-to-br from-neon-cyan/20 to-blue-500/20 border border-neon-cyan/30 text-white rounded-2xl rounded-br-none shadow-[0_4px_15px_rgba(0,243,255,0.1)]'
-                                                        : 'bg-white/5 border border-white/10 text-gray-200 rounded-2xl rounded-bl-none'
+                                                    ? 'bg-gradient-to-br from-neon-cyan/20 to-blue-500/20 border border-neon-cyan/30 text-white rounded-2xl rounded-br-none shadow-[0_4px_15px_rgba(0,243,255,0.1)]'
+                                                    : 'bg-white/5 border border-white/10 text-gray-200 rounded-2xl rounded-bl-none'
                                                     }`}
                                             >
                                                 {msg.text}
                                             </div>
 
                                             <span className="text-[10px] text-gray-500 mt-1 px-1">
-                                                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                         </div>
                                     );
@@ -159,9 +190,6 @@ export default function ChatWidget() {
             >
                 <div className="absolute inset-0 rounded-full bg-white opacity-0 group-hover:opacity-20 transition-opacity"></div>
                 {isOpen ? <X className="w-6 h-6" /> : <MessageSquare className="w-6 h-6" />}
-                {!isOpen && messages.length > 0 && (
-                    <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-red-500 border-2 border-black rounded-full animate-pulse"></span>
-                )}
             </motion.button>
         </div>
     );

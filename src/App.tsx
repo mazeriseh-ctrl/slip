@@ -1,8 +1,31 @@
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { Session } from '@supabase/supabase-js'
 import { Rocket, Shield, Zap, ChevronRight, Menu } from 'lucide-react'
 import ChatWidget from './components/ChatWidget'
-
+import { supabase } from './lib/supabase'
+import Auth from './components/Auth'
 function App() {
+    const [session, setSession] = useState<Session | null>(null)
+
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setSession(session)
+        })
+
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session)
+        })
+
+        return () => subscription.unsubscribe()
+    }, [])
+
+    if (!session) {
+        return <Auth />
+    }
+
     return (
         <div className="min-h-screen futuristic-grid relative overflow-hidden bg-dark-bg">
             <ChatWidget />
@@ -20,7 +43,16 @@ function App() {
                     <a href="#" className="hover:text-neon-cyan transition-colors">Ecosystem</a>
                     <a href="#" className="hover:text-neon-cyan transition-colors">Roadmap</a>
                 </div>
-                <div className="hidden md:flex">
+                <div className="hidden md:flex gap-4">
+                    <div className="flex items-center text-sm text-gray-400 mr-4">
+                        {session.user.email}
+                    </div>
+                    <button
+                        onClick={() => supabase.auth.signOut()}
+                        className="px-6 py-2 rounded-full border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-all font-semibold uppercase tracking-wider text-sm shadow-[0_0_15px_rgba(239,68,68,0.2)] hover:shadow-[0_0_25px_rgba(239,68,68,0.4)]"
+                    >
+                        Sign Out
+                    </button>
                     <button className="px-6 py-2 rounded-full border border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 transition-all font-semibold uppercase tracking-wider text-sm shadow-[0_0_15px_rgba(0,243,255,0.3)] hover:shadow-[0_0_25px_rgba(0,243,255,0.5)]">
                         Launch App
                     </button>
