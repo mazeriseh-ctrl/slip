@@ -1,0 +1,15 @@
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+build
+coverage
+
+# Configuration files
+*.config.js
+*.config.ts
+
+# Lock files
+package-lock.json
+bun.lockb 

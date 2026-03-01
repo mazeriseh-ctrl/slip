@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit",
+    "validate": "bun run type-check && bun run lint && bun run test:run"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
@@ -26,6 +28,7 @@
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.20.1",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
