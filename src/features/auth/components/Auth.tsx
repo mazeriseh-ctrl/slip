@@ -12,16 +12,17 @@ export default function Auth() {
         setLoading(true)
 
         try {
+            const trimmedEmail = email.trim()
             if (isLogin) {
                 const { error } = await supabase.auth.signInWithPassword({
-                    email,
+                    email: trimmedEmail,
                     password,
                 })
                 if (error) throw error
                 alert('เข้าสู่ระบบสำเร็จ!')
             } else {
                 const { error } = await supabase.auth.signUp({
-                    email,
+                    email: trimmedEmail,
                     password,
                 })
                 if (error) throw error
