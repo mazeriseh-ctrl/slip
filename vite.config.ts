@@ -31,4 +31,15 @@ export default defineConfig({
   server: {
     open: true,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          supabase: ['@supabase/supabase-js'],
+          ui: ['framer-motion', 'lucide-react']
+        }
+      }
+    }
+  }
 })
