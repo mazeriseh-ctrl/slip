@@ -12,17 +12,18 @@ export default function Auth() {
         setLoading(true)
 
         try {
-            const trimmedEmail = email.trim()
+            // ตัดช่องว่างหน้าหลัง และลบเครื่องหมาย ' กับ " ออก (ป้องกัน auto-fill คีย์บอร์ดมือถือแถมมา)
+            const cleanedEmail = email.trim().replace(/['"]/g, '')
             if (isLogin) {
                 const { error } = await supabase.auth.signInWithPassword({
-                    email: trimmedEmail,
+                    email: cleanedEmail,
                     password,
                 })
                 if (error) throw error
                 alert('เข้าสู่ระบบสำเร็จ!')
             } else {
                 const { error } = await supabase.auth.signUp({
-                    email: trimmedEmail,
+                    email: cleanedEmail,
                     password,
                 })
                 if (error) throw error

@@ -140,7 +140,7 @@ export default function ChatWidget() {
                                             )}
 
                                             <div
-                                                className={`max-w-[85%] p-3 text-sm shadow-md ${isMe
+                                                className={`max-w-[85%] p-3 text-sm shadow-md break-words ${isMe
                                                     ? 'bg-gradient-to-br from-neon-cyan/20 to-blue-500/20 border border-neon-cyan/30 text-white rounded-2xl rounded-br-none shadow-[0_4px_15px_rgba(0,243,255,0.1)]'
                                                     : 'bg-white/5 border border-white/10 text-gray-200 rounded-2xl rounded-bl-none'
                                                     }`}
