@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../../shared/lib/supabase';
 
 interface ChatMessage {
     id: number;
